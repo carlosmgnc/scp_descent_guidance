@@ -40,7 +40,7 @@ omega = Matrix([[0, -w[0], -w[1], -w[2]],
                 [w[1], -w[2], 0, w[0]],
                 [w[2], w[1], -w[0], 0]])
 
-v_dot = Matrix((1/m)*C*u)
+v_dot = Matrix((1/m)*C.T*u)
 q_dot = Matrix((1/2)*omega*q)
 w_dot= Matrix(Jbinv*(rt_cr*u - w_cr*Jb*w))
 # for calculting partial jacobian for asymmetric Jb
@@ -50,6 +50,7 @@ D_vq = v_dot.jacobian(q)
 D_qw = q_dot.jacobian(w)
 D_ww = w_dot.jacobian(w)
 # D_ww_J = w_dot_J.jacobian(w)
+
 
 print(D_vq)
 print()
