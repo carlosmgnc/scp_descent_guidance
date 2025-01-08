@@ -1,0 +1,56 @@
+attitude kinematics keep track of the change of the basis
+vectors (which by definition, form the reference frames)
+
+the objects we care about ARE the transofrmations themselves
+the basis vectors wrt each other.
+
+physics gives us the derivatives
+
+we need to cast those into a finite-dimensional parameter
+optimization problem. they discretize the trajectory into
+K evenly distributed discretization points. they perform
+the discretization with respect to normalized trajectory
+time tau. for convenience they define the following two
+sets:
+K  = {0, 1, ..., K-2, K-1}
+K_bar = {0, 1, ..., K-3, K-2}
+
+since normalized trajectory time is defined on the interval
+tau in [0, 1], they define the time at index K as:
+tau_k = (k/K-1), for all k in K
+to help with feasibility, assume a first order hold 
+between tim intervals so we can express:
+
+u(tau) = a_k(tau)u_k + b_k(tau)u_k+1, tau in [tau_k, tau_k+1], for all k in K_bar
+
+alpha and beta are convex coefficients between u_k and u_k+1
+
+scrap:
+
+
+def stm_func(self, t, x):
+        return self.linearize(t, "A") @ x
+
+    def B_func(self, t, x):
+        return self.stm_inv @ self.linearize(t, "B") * self.linearize(t, "alphak")
+
+    def C_func(self, t, x):
+        return self.stm_inv @ self.linearize(t, "B") * self.linearize(t, "betak")
+
+    def E_func(self, t, x):
+        return self.stm_inv @ self.linearize(t, "E")
+
+    def z_func(self, t, x):
+        return self.stm_inv @ self.linearize(t, "z")
+
+# print("alpha: " + str(self.linearize(sub_time, "alphak")))
+
+# A_temp = self.rk41(self.stm_func, sub_time, A_temp, dt_sub/2)
+# self.stm_inv = np.linalg.inv(A_temp)
+# A_temp = self.rk41(self.stm_func, sub_time, A_temp, dt_sub/2)
+# B_temp = A_temp @ self.rk41(self.B_func, sub_time, B_temp, dt_sub)
+# C_temp = A_temp @ self.rk41(self.C_func, sub_time, C_temp, dt_sub)
+# E_temp = A_temp @ self.rk41(self.E_func, sub_time, E_temp, dt_sub)
+# z_temp = A_temp @ self.rk41(self.z_func, sub_time, z_temp, dt_sub)
+
+
