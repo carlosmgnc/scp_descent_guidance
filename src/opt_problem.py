@@ -15,21 +15,21 @@ class optProblem:
         self.Jbvec = np.array([[0.01], [0.01], [0.01]])
         self.Jb = np.diag(self.Jbvec.flatten())
         self.Jbinv = np.diag((1 / self.Jbvec).flatten())
-        self.alpha = 0.005
+        self.alpha = 0.01
 
+        #discrete time grid
         self.nk = 50
         self.K = np.arange(0, self.nk)
         self.dt = 1 / (self.nk - 1)
         self.tau = np.linspace(0, 1, self.nk)
 
         # initial conditions
-        ri = np.array([[4], [3], [2]])
-        vi = np.array([[-0.5], [-4], [0]])
-        vf = np.array([[0], [0], [0]])
+        ri = np.array([[4], [4], [0]])
+        vi = np.array([[-0.5], [-2], [2]])
+        vf = np.array([[0], [-0.1], [0]])
         self.g = np.array([[-1], [0], [0]])
 
         tfguess = 5
-
         alpha1_list = (1 - self.tau) / (1)
         alpha2_list = 1 - alpha1_list
 
@@ -187,7 +187,6 @@ class optProblem:
             for j in range(0, nsub + 1):
                 sub_time = i * self.dt + j * dt_sub
                 P_temp = self.rk41(self.P_dot, sub_time, P_temp, dt_sub)
-                # print(sub_time)
 
             stm = P_temp[xnd : stmnd].reshape((14, 14))
             self.A[i, :, :] = stm
@@ -209,18 +208,17 @@ class optProblem:
         sigma = cvx.Variable((1, 1), nonneg=True)
         nu = cvx.Variable((14, self.nk - 1))
 
-        # w_delta = 0.001
-        # w_deltasigma = 0.01
-        w_nu = 100000  ##
+        w_nu = 100000 
 
         theta_max = np.deg2rad(90)
         deltamax = np.deg2rad(20)
         w_max = np.deg2rad(60)
+        gamma_gs = np.deg2rad(20)
 
         nu_cost = 0
         dz_cost = 0
 
-        W = np.diag([0.5 for x in range(18)])
+        W = np.diag([100 for x in range(18)])
 
         constraints = []
         constraints += [self.md <= x[0, :]]
@@ -249,13 +247,23 @@ class optProblem:
             ]
 
             constraints += [np.cos(deltamax) * cvx.norm(u[:, [k]]) <= u[0, [k]]]
+
+            e2 = np.array([[0], [1], [0]])
+            e3 = np.array([[0], [0], [1]])
+            H23 = np.hstack([e2, e3])
+
+            constraints += [np.tan(gamma_gs) * cvx.norm(H23.T @ x[1:4, [k]]) <= x[1, [k]]]
         
         #boundary conditions
         constraints += [x[0, 0] == self.xk[0, 0]]
         constraints += [x[1:4, 0] == self.xk[1:4, 0]]
         constraints += [x[4:7, 0] == self.xk[4:7, 0]]
         constraints += [x[11:14, 0] == self.xk[11:14, 0]]
+
+        #constraints += [x[1:, 0] == self.xk[1:, 0]]
         constraints += [x[1:, -1] == self.xk[1:, -1]]
+
+        #stay above ground
         constraints += [x[1, :] >= 0]
 
         #dynamics constrains
@@ -281,16 +289,18 @@ class optProblem:
 
         objective = cvx.Minimize(cost)
         prob = cvx.Problem(objective, constraints)
+
+        print("----------------------------------")
         print("solving")
-        prob.solve()
-        print("solver status: " + prob.status)
-        print(prob.solver_stats.solve_time)
-        print(prob.solver_stats.solver_name)
-        print(prob.objective.value)
-        print("sigma: " + str(sigma.value))
+        prob.solve("CLARABEL")
+        print("solver status : " + prob.status)
+        print("solve time    :" + str(prob.solver_stats.solve_time))
+        print("cost          :" + str(prob.objective.value))
+        print("sigma         : " + str(sigma.value))
+        print("----------------------------------")
 
         self.xk = x.value
         self.uk = u.value
         self.sigmak = sigma.value
 
-        return x.value, u.value, nu.value
+        return x.value, u.value, sigma.value, cost, nu.value
