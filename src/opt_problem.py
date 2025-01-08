@@ -290,8 +290,8 @@ class optProblem:
         objective = cvx.Minimize(cost)
         prob = cvx.Problem(objective, constraints)
 
-        print("----------------------------------")
         print("solving")
+        print("----------------------------------")
         prob.solve("CLARABEL")
         print("solver status : " + prob.status)
         print("solve time    :" + str(prob.solver_stats.solve_time))
