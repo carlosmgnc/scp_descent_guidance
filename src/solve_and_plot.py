@@ -4,33 +4,46 @@ import cvxpy as cvx
 from matplotlib.animation import FuncAnimation
 from opt_problem import optProblem
 
-
 opt = optProblem()
 
-def DCM_output(q): 
-        return np.array(
-            [
-                [
-                    1 - 2 * (q[2] ** 2 + q[3] ** 2),
-                    2 * (q[1] * q[2] + q[0] * q[3]),
-                    2 * (q[1] * q[3] - q[0] * q[2]),
-                ],
-                [
-                    2 * (q[1] * q[2] - q[0] * q[3]),
-                    1 - 2 * (q[1] ** 2 + q[3] ** 2),
-                    2 * (q[2] * q[3] + q[0] * q[1]),
-                ],
-                [
-                    2 * (q[1] * q[3] + q[0] * q[2]),
-                    2 * (q[2] * q[3] - q[0] * q[1]),
-                    1 - 2 * (q[1] ** 2 + q[2] ** 2),
-                ],
-            ]
-        )
+#iterative solve
+max_iter = 30
+converged_iter = max_iter
+sigma_list = np.empty((max_iter, 1))
+trajectory_list = np.zeros((max_iter, 14, opt.nk))
 
-for i in range(0, 12):
+for i in range(0, max_iter):
     opt.discretize()
-    x, u, nu = opt.solve_cvx_problem()
+    x, u, sigma, cost, nu = opt.solve_cvx_problem()
+
+    sigma_list[i] = sigma
+    trajectory_list[i, :, :] = x
+
+    if np.abs(sigma - cost.value) <= 0.005:
+        converged_iter = i
+        break
+    
+
+def DCM_output(q): 
+    return np.array(
+        [
+            [
+                1 - 2 * (q[2] ** 2 + q[3] ** 2),
+                2 * (q[1] * q[2] + q[0] * q[3]),
+                2 * (q[1] * q[3] - q[0] * q[2]),
+            ],
+            [
+                2 * (q[1] * q[2] - q[0] * q[3]),
+                1 - 2 * (q[1] ** 2 + q[3] ** 2),
+                2 * (q[2] * q[3] + q[0] * q[1]),
+            ],
+            [
+                2 * (q[1] * q[3] + q[0] * q[2]),
+                2 * (q[2] * q[3] - q[0] * q[1]),
+                1 - 2 * (q[1] ** 2 + q[2] ** 2),
+            ],
+        ]
+    )
 
 plt.figure(1)
 plt.title("pos vs time")
@@ -39,8 +52,8 @@ labels = []
 for i in range(3):
     plt.plot(opt.tau, x[1 + i, :], label="")
 plt.legend(["x", "y", "z"])
-plt.xlabel("time (s)")
-plt.ylabel("position (m)")
+plt.xlabel("time")
+plt.ylabel("position")
 
 plt.figure(2)
 plt.title("u")
@@ -49,15 +62,15 @@ labels = []
 for i in range(3):
     plt.plot(opt.tau, u[i, :], label="")
 plt.legend(["ux", "uy", "uz"])
-plt.xlabel("time (s)")
-plt.ylabel("thrust vector (m)")
+plt.xlabel("time")
+plt.ylabel("thrust vector")
 
 # control effort plots
 plt.figure(3)
 plt.title("norm(thrust_vector) vs time")
 plt.plot(opt.tau[:], np.linalg.norm(u[:, :], axis=0))
-plt.xlabel("time (s)")
-plt.ylabel("thrust (N)")
+plt.xlabel("time")
+plt.ylabel("thrust")
 
 plt.figure(4)
 plt.title("virtual control")
@@ -67,16 +80,32 @@ for i in range(nu.shape[0]):
     plt.plot(opt.tau[1:], nu[i, :])
     #print(np.linalg.norm(max(nu[i, :])))
 
-    plt.xlabel("time (s)")
+    plt.xlabel("time")
     plt.ylabel("virtual control")
 plt.legend()
 
+# convergence plot
+plt.figure(5)
+plt.title("final time vs iteration number")
+plt.plot(range(converged_iter), sigma_list[:converged_iter])
+plt.xlabel("iteration")
+plt.ylabel("final time")
+
+plt.figure(5)
+plt.title("final time vs iteration number")
+
+#plt.plot(range(converged_iter), trajectory_list[i, :, converged_iter].reshape())
+plt.xlabel("iteration")
+plt.ylabel("final time")
+
 # 3d trajectory plot
-fig_traj_plot = plt.figure(5, figsize=(8, 8))
+fig_traj_plot = plt.figure(6, figsize=(8, 8))
 # fig_traj_plot.subplots_adjust(left=0.1, right=0.9, top=0.95, bottom=0.05)
 fig_traj_plot.tight_layout()
 ax = plt.axes(projection="3d")
-ax.view_init(elev=15, azim=-160)
+ax.view_init(elev=25, azim=161)
+
+#ax.view_init(elev=0, azim=90)
 ax.plot3D(x[2, :], x[3, :], x[1, :])
 
 # fix aspect ratio of 3d plot
@@ -92,10 +121,10 @@ y_mid = sum(y_lim) * 0.5
 
 rt_I = np.zeros((3, opt.nk))
 for i in range(opt.nk):
-    rt_I[:, [i]] = 10 * DCM_output(x[7:11, i]).T @ opt.rt
+    rt_I[:, [i]] = 15 * DCM_output(x[7:11, i]).T @ opt.rt
 
 thrust_vecs = np.empty((3, opt.nk))
-qlen = 0.01 * max_lim
+qlen = 0.03 * max_lim
 
 for i in range(rt_I.shape[1]):
     thrust_vecs[:, [i]] = DCM_output(x[7:11, i]).T @ u[:, [i]]
@@ -107,16 +136,16 @@ base_y = x[2, :] - q[1, :]
 base_z = x[3, :] - q[2, :]
 
 ax.quiver(
-    base_y,
-    base_z,
-    base_x,
-    q[1, :],
-    q[2, :],
-    q[0, :],
+    base_y[::4],
+    base_z[::4],
+    base_x[::4],
+    q[1, ::4],
+    q[2, ::4],
+    q[0, ::4],
     normalize=False,
     arrow_length_ratio=0.1,
-    color="red",
-    linewidth=0.5,
+    color=(1, 60/255, 0),
+    linewidth=1,
 )
 
 base_x_2 = x[1, :]
@@ -124,16 +153,16 @@ base_y_2 = x[2, :]
 base_z_2 = x[3, :]
 
 ax.quiver(
-    base_y_2,
-    base_z_2,
-    base_x_2,
-    -2 * rt_I[1, :],
-    -2 * rt_I[2, :],
-    -2 * rt_I[0, :],
+    base_y_2[::4],
+    base_z_2[::4],
+    base_x_2[::4],
+    -2 * rt_I[1, ::4],
+    -2 * rt_I[2, ::4],
+    -2 * rt_I[0, ::4],
     normalize=False,
-    arrow_length_ratio=0.1,
-    color="black",
-    linewidth=1.0,
+    arrow_length_ratio=0,
+    color=(0.1, 0.1, 0.1),
+    linewidth=2.0,
 )
 
 ax.set_xlim3d([x_mid - max_lim * 0.5, x_mid + max_lim * 0.5])
@@ -144,7 +173,7 @@ ax.plot((0, 0), ax.get_ylim(), (0, 0), color="black", linestyle="--", linewidth=
 
 
 def shared_traj_plot_properties(ax):
-    ax.set_title("time optimal trajectory")
+    ax.set_title("converged trajectory")
     ax.scatter(0, 0, 0, color="green", s=10)
     ax.set_xlabel("y")
     ax.set_ylabel("z")
@@ -155,11 +184,15 @@ shared_traj_plot_properties(ax)
 
 ############################# animation #############################
 
-fig_anim = plt.figure(6, figsize=(8, 8))
+fig_anim = plt.figure(7, figsize=(8, 8))
 fig_anim.tight_layout()
 ax_anim = plt.axes(projection="3d")
-ax_anim.view_init(elev=15, azim=-160)
+ax_anim.view_init(elev=25, azim=161)
 ax_anim.plot3D(x[2, :], x[3, :], x[1, :], linestyle="--", linewidth=0.5, color="black")
+# for i in range(converged_iter):
+#     #print(trajectory_list[i, 2, :])
+#     ax_anim.plot3D(trajectory_list[i, 2, :], trajectory_list[i, 3, :], trajectory_list[i, 1, :], linestyle="--", linewidth=0.5, color="black")
+
 shared_traj_plot_properties(ax_anim)
 ax_anim.set_xlim(ax.get_xlim())
 ax_anim.set_ylim(ax.get_ylim())
@@ -174,7 +207,7 @@ quiver = ax_anim.quiver(
     q[0, 0],
     normalize=False,
     arrow_length_ratio=0.1,
-    color="red",
+    color=(1, 60/255, 0),
     linewidth=1,
 )
 quiver2 = ax_anim.quiver(
@@ -185,9 +218,9 @@ quiver2 = ax_anim.quiver(
     -2 * rt_I[2, 0],
     -2 * rt_I[0, 0],
     normalize=False,
-    arrow_length_ratio=0.1,
-    color="black",
-    linewidth=1,
+    arrow_length_ratio=0,
+    color=(0.1, 0.1, 0.1),
+    linewidth=2.0,
 )
 
 
@@ -224,7 +257,12 @@ def update(frame):
 anim_int = 100
 animation = FuncAnimation(fig_anim, update, frames=opt.nk, interval=anim_int)
 
-fig_names = ["position", "trajectory", "throttle", "thrusts", "mass", "cost_tof"]
+fig_names = ["position", "control", "throttle", "virtual_control", "tof_iteration", "trajectory", "animation"]
+
+for i in range(1, 8):
+    plt.figure(i).savefig("../images/" + fig_names[i - 1] + ".png", dpi=300)
+
+animation.save("../images/animation.gif", writer="pillow", fps=1000 / anim_int)
 
 plt.show(block=False)
 plt.pause(1)

@@ -10,13 +10,14 @@ from opt_problem import optProblem
 class simulation:
     def __init__(self):
 
+        self.opt = optProblem()
+
         self.trajectory = np.zeros((14, self.opt.nk))
         self.u = np.zeros((3, self.opt.nk))
         self.sigma_opt = 0
 
     def nonlin_func(self, t, X):
         x = X.flatten()
-        
         alphak, betak, tk, tk1, k = self.opt.get_alphas(t)
         u = (alphak * self.u[:, k] + betak * self.u[:, k]).reshape((3, 1))
         u = u.flatten()
@@ -39,7 +40,6 @@ class simulation:
             for j in range(0, nsub + 1):
                 sub_time = i * self.opt.dt + j * dt_sub
                 P_temp = self.opt.rk41(self.nonlin_func, sub_time, P_temp, dt_sub)
-                print(sub_time)
 
             self.trajectory[:, [i + 1]] = P_temp
 
@@ -49,7 +49,7 @@ sim = simulation()
 
 for i in range(0, 12):
     opt2.discretize()
-    x, u, sigma, nu = opt2.solve_cvx_problem()
+    x, u, sigma, cost, nu = opt2.solve_cvx_problem()
 
 sim.trajectory = x
 sim.u = u
@@ -176,7 +176,7 @@ ax.plot((0, 0), ax.get_ylim(), (0, 0), color="black", linestyle="--", linewidth=
 
 
 def shared_traj_plot_properties(ax):
-    ax.set_title("fuel optimal trajectory")
+    ax.set_title("converged trajectory")
     ax.scatter(0, 0, 0, color="green", s=10)
     ax.set_xlabel("y")
     ax.set_ylabel("z")
@@ -253,7 +253,7 @@ def update(frame):
     return quiver, quiver2
 
 
-anim_int = 60
+anim_int = 70
 animation = FuncAnimation(fig_anim, update, frames=sim.opt.nk, interval=anim_int)
 
 fig_names = ["position", "trajectory", "throttle", "thrusts", "mass", "cost_tof"]
