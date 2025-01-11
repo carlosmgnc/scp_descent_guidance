@@ -15,7 +15,7 @@ class optProblem:
         self.Jbvec = np.array([[0.01], [0.01], [0.01]])
         self.Jb = np.diag(self.Jbvec.flatten())
         self.Jbinv = np.diag((1 / self.Jbvec).flatten())
-        self.alpha = 0.01
+        self.alpha = 0.05
 
         #discrete time grid
         self.nk = 50
@@ -91,15 +91,13 @@ class optProblem:
         k = int(np.floor(t / self.dt))
         tk = self.tau[k]
 
-        # FOH interpolation of control input
-        if t != 1:
+        if k + 1 <= self.nk-1:
             tk1 = self.tau[k + 1]
-            alphak = (tk1 - t) / (tk1 - tk)
-            betak = 1 - alphak
-        else:
-            tk1 = 1
-            alphak = 1
-            betak = 0
+        else: 
+            tk1 = 1 + self.dt
+
+        alphak = (tk1 - t) / (tk1 - tk)
+        betak = 1 - alphak
 
         return alphak, betak, tk, tk1, k
     
@@ -138,7 +136,11 @@ class optProblem:
         phi_inv = np.linalg.inv(phi)
 
         alphak, betak, tk, tk1, k = self.get_alphas(t)
-        u = (alphak * self.uk[:, k] + betak * self.uk[:, k]).reshape((3, 1))
+
+        if k + 1 <= self.nk-1:
+            u = (alphak * self.uk[:, k] + betak * self.uk[:, k+1]).reshape((3, 1))
+        else: 
+            u = (self.uk[:, k]).reshape((3, 1))
 
         X_flat = X[:14].flatten()
         u_flat = u.flatten()
@@ -184,7 +186,7 @@ class optProblem:
         P_temp[End : znd, [0]] = np.zeros((14, 1))
 
         for i in range(0, self.nk - 1):
-            for j in range(0, nsub + 1):
+            for j in range(0, nsub+1):
                 sub_time = i * self.dt + j * dt_sub
                 P_temp = self.rk41(self.P_dot, sub_time, P_temp, dt_sub)
 
@@ -207,8 +209,12 @@ class optProblem:
         u = cvx.Variable((3, self.nk))
         sigma = cvx.Variable((1, 1), nonneg=True)
         nu = cvx.Variable((14, self.nk - 1))
+        #delta = cvx.Variable((self.nk, 1), nonneg=True)
+        #delta_sigma = cvx.Variable(nonneg=True)
 
-        w_nu = 100000 
+        w_nu = 10000
+        w_delta = 0.001
+        w_sigma = 0.1
 
         theta_max = np.deg2rad(90)
         deltamax = np.deg2rad(20)
@@ -218,11 +224,10 @@ class optProblem:
         nu_cost = 0
         dz_cost = 0
 
-        W = np.diag([100 for x in range(18)])
+        W = np.diag([10 for x in range(18)])
 
         constraints = []
         constraints += [self.md <= x[0, :]]
-        constraints += [sigma >= 1]
 
         for k in range(self.nk):
             # soft trust region cost
@@ -253,6 +258,9 @@ class optProblem:
             H23 = np.hstack([e2, e3])
 
             constraints += [np.tan(gamma_gs) * cvx.norm(H23.T @ x[1:4, [k]]) <= x[1, [k]]]
+            
+            #constraints += [cvx.quad_form(cvx.vstack([dx, du]), np.eye(17)) <= delta[k,0]]
+            #constraints += [cvx.norm(dsigma, 1) <= delta_sigma]
         
         #boundary conditions
         constraints += [x[0, 0] == self.xk[0, 0]]
@@ -260,11 +268,8 @@ class optProblem:
         constraints += [x[4:7, 0] == self.xk[4:7, 0]]
         constraints += [x[11:14, 0] == self.xk[11:14, 0]]
 
-        #constraints += [x[1:, 0] == self.xk[1:, 0]]
+        # constraints += [x[1:, 0] == self.xk[1:, 0]]
         constraints += [x[1:, -1] == self.xk[1:, -1]]
-
-        #stay above ground
-        constraints += [x[1, :] >= 0]
 
         #dynamics constrains
         for k in range(0, self.nk - 1):
@@ -285,6 +290,8 @@ class optProblem:
             sigma
             + dz_cost
             + w_nu * nu_cost
+            #+ w_delta * cvx.norm(delta)
+            #+ w_sigma * cvx.norm(delta_sigma, 1)
         )
 
         objective = cvx.Minimize(cost)
@@ -303,4 +310,4 @@ class optProblem:
         self.uk = u.value
         self.sigmak = sigma.value
 
-        return x.value, u.value, sigma.value, cost, nu.value
+        return x.value, u.value, sigma.value, cost.value, nu.value#, delta.value
