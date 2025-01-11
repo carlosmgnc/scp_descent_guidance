@@ -55,4 +55,7 @@ solver.solve()
 
 sim = simulation(solver.opt, solver)
 sim.integrate_full_trajectory()
+
+print("final position: " + str(sim.trajectory[1:4, -1]))
 plotter.plot(sim.opt, solver, sim.trajectory)
+
