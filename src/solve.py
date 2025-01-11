@@ -27,4 +27,3 @@ class solveProblem():
             if np.abs(self.sigma - self.cost) <= 0.0005:
                 self.converged_iter = i
                 break
-        return 
