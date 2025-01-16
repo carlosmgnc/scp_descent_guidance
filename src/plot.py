@@ -42,14 +42,14 @@ class Plots():
 
 
         plt.figure(2)
-        plt.title("pos vs time")
+        plt.title("mass vs time")
 
         plt.plot(opt.tau, x[0, :], label="")
         plt.xlabel("time")
         plt.ylabel("mass")
 
         plt.figure(3)
-        plt.title("u")
+        plt.title("control input vs time")
         labels = []
 
         for i in range(3):
@@ -58,7 +58,6 @@ class Plots():
         plt.xlabel("time")
         plt.ylabel("thrust vector")
 
-        # control effort plots
         plt.figure(4)
         plt.title("norm(thrust_vector) vs time")
         plt.plot(opt.tau[:], np.linalg.norm(u[:, :], axis=0))
@@ -245,7 +244,7 @@ class Plots():
         anim_int = 100
         animation = FuncAnimation(fig_anim, update, frames=opt.nk, interval=anim_int)
 
-        fig_names = ["position", "control", "throttle", "virtual_control", "tof_iteration", "trajectory", "animation"]
+        fig_names = ["position", "mass", "control", "throttle", "virtual_control", "tof_iteration", "trajectory", "animation"]
 
         for i in range(1, 8):
             plt.figure(i).savefig("../images/" + fig_names[i - 1] + ".png", dpi=300)
