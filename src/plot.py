@@ -247,10 +247,10 @@ class Plots():
 
         fig_names = ["position", "control", "throttle", "virtual_control", "tof_iteration", "trajectory", "animation"]
 
-        # for i in range(1, 8):
-        #     plt.figure(i).savefig("../images/" + fig_names[i - 1] + ".png", dpi=300)
+        for i in range(1, 8):
+            plt.figure(i).savefig("../images/" + fig_names[i - 1] + ".png", dpi=300)
 
-        # animation.save("../images/animation.gif", writer="pillow", fps=1000 / anim_int)
+        animation.save("../images/animation.gif", writer="pillow", fps=1000 / anim_int)
 
         plt.show(block=False)
         plt.pause(1)
