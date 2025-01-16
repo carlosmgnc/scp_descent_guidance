@@ -187,14 +187,13 @@ class optProblem:
 
         P_temp = np.empty((znd, 1))
 
-        P_temp[:xnd, [0]] = self.xk[:, [0]]
-        P_temp[xnd : stmnd, [0]] = np.eye(14).reshape((nsq, 1))
-        P_temp[stmnd : Bnd, [0]] = np.zeros((14, 3)).reshape((14 * 3, 1))
-        P_temp[Bnd: Cnd, [0]] = np.zeros((14, 3)).reshape((14 * 3, 1))
-        P_temp[Cnd : End, [0]] = np.zeros((14, 1))
-        P_temp[End : znd, [0]] = np.zeros((14, 1))
-
         for i in range(0, self.nk - 1):
+            P_temp[:xnd, [0]] = self.xk[:, [i]]
+            P_temp[xnd: stmnd, [0]] = np.eye(14).reshape((nsq, 1))
+            P_temp[stmnd : Bnd, [0]] = np.zeros((14, 3)).reshape((14 * 3, 1))
+            P_temp[Bnd: Cnd, [0]] = np.zeros((14, 3)).reshape((14 * 3, 1))
+            P_temp[Cnd: End, [0]] = np.zeros((14, 1))
+            P_temp[End : znd, [0]] = np.zeros((14, 1))
 
             for j in range(0, nsub+1):
                 sub_time = i * self.dt + j * dt_sub
@@ -207,12 +206,6 @@ class optProblem:
             self.E[:, [i]] = stm @ P_temp[Cnd : End].reshape((14, 1))
             self.z[:, [i]] = stm @ P_temp[End : znd].reshape((14, 1))
 
-            P_temp[:xnd, [0]] = self.xk[:, [i+1]]
-            P_temp[xnd: stmnd, [0]] = np.eye(14).reshape((nsq, 1))
-            P_temp[stmnd : Bnd, [0]] = np.zeros((14, 3)).reshape((14 * 3, 1))
-            P_temp[Bnd: Cnd, [0]] = np.zeros((14, 3)).reshape((14 * 3, 1))
-            P_temp[Cnd: End, [0]] = np.zeros((14, 1))
-            P_temp[End : znd, [0]] = np.zeros((14, 1))
 
     def solve_cvx_problem(self):
         x = cvx.Variable((14, self.nk))
