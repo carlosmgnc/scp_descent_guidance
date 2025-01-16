@@ -1,4 +1,4 @@
-1. Example trajectory 
+1. Example trajectory (using non-dimensional units),  v_init_xyz = [0, -2, 2], free initial attitude
 <div style="text-align: center;">
   <img src="images/trajectory.png" alt="trajectory" width="400" />
   <img src="images/animation.gif" alt="animation" width="400" />
