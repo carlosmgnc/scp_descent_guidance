@@ -21,25 +21,26 @@ class simulation:
         self.u = self.solver.u
         self.sigma_opt = self.solver.sigma
 
+    # nonlinear dynamics derivative function for rk4
     def nonlin_func(self, t, X):
         x = X.flatten()
         alphak, betak, tk, tk1, k = self.opt.get_alphas(t)
-        u = (alphak * self.u[:, k] + betak * self.u[:, k]).reshape((3, 1))
+        if k + 1 <= self.opt.nk-1:
+            u = (alphak * self.u[:, k] + betak * self.u[:, k+1]).reshape((3, 1))
+        else: 
+            u = (self.u[:, k]).reshape((3, 1))
         u = u.flatten()
 
         def sigmaE_f(E_f):
             
             return self.sigma_opt * E_f
 
-
         return sigmaE_f(self.opt.E_f(x, u))
-        
+    
+    # integrate nonlinear dynamics using rk4
     def integrate_full_trajectory(self):
-
-        nsub = 15
+        nsub = 30
         dt_sub = self.opt.dt / (nsub + 1)
-
-
         P_temp = self.trajectory[:, [0]]
 
         for i in range(0, self.opt.nk - 1):

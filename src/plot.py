@@ -40,7 +40,15 @@ class Plots():
         plt.xlabel("time")
         plt.ylabel("position")
 
+
         plt.figure(2)
+        plt.title("pos vs time")
+
+        plt.plot(opt.tau, x[0, :], label="")
+        plt.xlabel("time")
+        plt.ylabel("mass")
+
+        plt.figure(3)
         plt.title("u")
         labels = []
 
@@ -51,13 +59,13 @@ class Plots():
         plt.ylabel("thrust vector")
 
         # control effort plots
-        plt.figure(3)
+        plt.figure(4)
         plt.title("norm(thrust_vector) vs time")
         plt.plot(opt.tau[:], np.linalg.norm(u[:, :], axis=0))
         plt.xlabel("time")
         plt.ylabel("thrust")
 
-        plt.figure(4)
+        plt.figure(5)
         plt.title("virtual control")
         labels = []
 
@@ -70,14 +78,14 @@ class Plots():
         plt.legend()
 
         # convergence plot
-        plt.figure(5)
+        plt.figure(6)
         plt.title("final time vs iteration number")
         plt.plot(range(solver.converged_iter), solver.sigma_list[:solver.converged_iter])
         plt.xlabel("iteration")
         plt.ylabel("final time")
 
         # 3d trajectory plot
-        fig_traj_plot = plt.figure(6, figsize=(8, 8))
+        fig_traj_plot = plt.figure(7, figsize=(8, 8))
         # fig_traj_plot.subplots_adjust(left=0.1, right=0.9, top=0.95, bottom=0.05)
         fig_traj_plot.tight_layout()
         ax = plt.axes(projection="3d")
@@ -113,13 +121,14 @@ class Plots():
         base_y = x[2, :] - q[1, :]
         base_z = x[3, :] - q[2, :]
 
+        skip = 1
         ax.quiver(
-            base_y[::4],
-            base_z[::4],
-            base_x[::4],
-            q[1, ::4],
-            q[2, ::4],
-            q[0, ::4],
+            base_y[::skip],
+            base_z[::skip],
+            base_x[::skip],
+            q[1, ::skip],
+            q[2, ::skip],
+            q[0, ::skip],
             normalize=False,
             arrow_length_ratio=0.1,
             color=(1, 60/255, 0),
@@ -131,12 +140,12 @@ class Plots():
         base_z_2 = x[3, :]
 
         ax.quiver(
-            base_y_2[::4],
-            base_z_2[::4],
-            base_x_2[::4],
-            -2 * rt_I[1, ::4],
-            -2 * rt_I[2, ::4],
-            -2 * rt_I[0, ::4],
+            base_y_2[::skip],
+            base_z_2[::skip],
+            base_x_2[::skip],
+            -2 * rt_I[1, ::skip],
+            -2 * rt_I[2, ::skip],
+            -2 * rt_I[0, ::skip],
             normalize=False,
             arrow_length_ratio=0,
             color=(0.1, 0.1, 0.1),
@@ -162,14 +171,15 @@ class Plots():
 
         ############################# animation #############################
 
-        fig_anim = plt.figure(7, figsize=(8, 8))
+        fig_anim = plt.figure(8, figsize=(8, 8))
         fig_anim.tight_layout()
         ax_anim = plt.axes(projection="3d")
         ax_anim.view_init(elev=25, azim=161)
         ax_anim.plot3D(x[2, :], x[3, :], x[1, :], linestyle="--", linewidth=0.5, color="black")
-        for i in range(solver.converged_iter):
-            #print(trajectory_list[i, 2, :])
-            ax_anim.plot3D(solver.trajectory_list[i, 2, :], solver.trajectory_list[i, 3, :], solver.trajectory_list[i, 1, :], linestyle="--", linewidth=0.5, color="black")
+        #solver.converged_iter
+        # for i in range(solver.converged_iter):
+        #     #print(trajectory_list[i, 2, :])
+        #     ax_anim.plot3D(solver.trajectory_list[i, 2, :], solver.trajectory_list[i, 3, :], solver.trajectory_list[i, 1, :], linestyle="--", linewidth=0.5, color="black")
 
         shared_traj_plot_properties(ax_anim)
         ax_anim.set_xlim(ax.get_xlim())
@@ -237,10 +247,10 @@ class Plots():
 
         fig_names = ["position", "control", "throttle", "virtual_control", "tof_iteration", "trajectory", "animation"]
 
-        for i in range(1, 8):
-            plt.figure(i).savefig("../images/" + fig_names[i - 1] + ".png", dpi=300)
+        # for i in range(1, 8):
+        #     plt.figure(i).savefig("../images/" + fig_names[i - 1] + ".png", dpi=300)
 
-        animation.save("../images/animation.gif", writer="pillow", fps=1000 / anim_int)
+        # animation.save("../images/animation.gif", writer="pillow", fps=1000 / anim_int)
 
         plt.show(block=False)
         plt.pause(1)

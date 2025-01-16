@@ -16,6 +16,7 @@ class solveProblem():
         self.cost = 0
         self.nu = np.zeros((14, self.opt.nk-1))
 
+    # successively solve convex sub-problems
     def solve(self):
         for i in range(0, self.max_iter):
             self.opt.discretize()
@@ -24,7 +25,7 @@ class solveProblem():
             self.sigma_list[i] = self.sigma
             self.trajectory_list[i, :, :] = self.x
 
-            if np.abs(self.sigma - self.cost) <= 0.0005:
+            if np.abs(self.sigma - self.cost) <= 0.00025:
                 self.converged_iter = i
                 break
         return 
